@@ -48,7 +48,7 @@
 
 <div class="hero-section">
     <div class="hero-text">
-        <h2>Hello, I'm <span class="highlight">Sukanta</span>!</h2>
+        <h2>Hello, I'm <span class="highlight">Sukanta | Sagnik</span>!</h2>
         <p style="font-size: 1.2em; color: #555;">
             Welcome to my very first portfolio website. I am an aspiring web developer passionate about learning how to build things on the internet.
         </p>
