@@ -100,7 +100,7 @@ export default function Home() {
         <div className={`mb-8 flex items-start justify-between transition-all duration-700 ${showContent ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-4'}`}>
           <div>
             <h1 className="text-4xl md:text-5xl font-bold gradient-text mb-2 animate-gradient">
-              {process.env.NEXT_PUBLIC_SITE_NAME || 'Solo Leveling Manager'}
+              {process.env.NEXT_PUBLIC_SITE_NAME || 'Time Bot'}
             </h1>
             <p className="text-gray-400">
               Welcome, <span className="text-glow-orange text-orange-400 font-semibold">{user.username}</span>. Grow stronger by completing tasks.

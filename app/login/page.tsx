@@ -342,10 +342,10 @@ export default function LoginPage() {
               
               <div className="relative">
                 <h1 className="text-6xl md:text-7xl font-black text-transparent bg-clip-text bg-gradient-to-r from-orange-400 via-amber-400 to-orange-500 drop-shadow-2xl mb-1">
-                  SKILL
+                  TIME
                 </h1>
                 <p className="text-4xl md:text-5xl font-black text-transparent bg-clip-text bg-gradient-to-r from-amber-400 via-yellow-400 to-amber-500 drop-shadow-2xl">
-                  FORGE
+                  BOT
                 </p>
               </div>
             </div>

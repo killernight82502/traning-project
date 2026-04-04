@@ -30,7 +30,7 @@ export function useAuth() {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    const storedUser = localStorage.getItem("skillforge_user");
+    const storedUser = localStorage.getItem("timebot_user");
     if (storedUser) {
       try {
         const parsedUser = JSON.parse(storedUser) as User;
@@ -40,18 +40,18 @@ export function useAuth() {
           parsedUser.avatarUrl = parsedUser.premiumTier 
             ? PREMIUM_AVATARS[parsedUser.premiumTier]
             : PREMIUM_AVATARS.elite;
-          localStorage.setItem("skillforge_user", JSON.stringify(parsedUser));
+          localStorage.setItem("timebot_user", JSON.stringify(parsedUser));
         }
         
         // Ensure non-premium users have a default avatar
         if (!parsedUser.isPremium && !parsedUser.avatarUrl) {
           parsedUser.avatarUrl = DEFAULT_AVATARS[parsedUser.gender];
-          localStorage.setItem("skillforge_user", JSON.stringify(parsedUser));
+          localStorage.setItem("timebot_user", JSON.stringify(parsedUser));
         }
         
         setUser(parsedUser);
       } catch (e) {
-        localStorage.removeItem("skillforge_user");
+        localStorage.removeItem("timebot_user");
       }
     }
     setIsLoading(false);
@@ -81,8 +81,8 @@ export function useAuth() {
       createdAt: Date.now(),
     };
 
-    localStorage.setItem("skillforge_user", JSON.stringify(userData));
-    localStorage.setItem(`skillforge_password_${username}`, password);
+    localStorage.setItem("timebot_user", JSON.stringify(userData));
+    localStorage.setItem(`timebot_password_${username}`, password);
     setUser(userData);
     return true;
   };
@@ -97,7 +97,7 @@ export function useAuth() {
         avatarUrl,
         selectedCosmetic: isPremium ? "golden" : user.selectedCosmetic,
       };
-      localStorage.setItem("skillforge_user", JSON.stringify(updatedUser));
+      localStorage.setItem("timebot_user", JSON.stringify(updatedUser));
       setUser(updatedUser);
       
       if (isPremium) {
@@ -111,7 +111,7 @@ export function useAuth() {
   const updateCosmetic = (cosmetic: string) => {
     if (user) {
       const updatedUser = { ...user, selectedCosmetic: cosmetic };
-      localStorage.setItem("skillforge_user", JSON.stringify(updatedUser));
+      localStorage.setItem("timebot_user", JSON.stringify(updatedUser));
       setUser(updatedUser);
       toast.success("Cosmetic Equipped", {
         description: `Your avatar has been updated with ${cosmetic}.`,
@@ -122,7 +122,7 @@ export function useAuth() {
   const updateAvatarUrl = (url: string) => {
     if (user) {
       const updatedUser = { ...user, avatarUrl: url };
-      localStorage.setItem("skillforge_user", JSON.stringify(updatedUser));
+      localStorage.setItem("timebot_user", JSON.stringify(updatedUser));
       setUser(updatedUser);
       toast.success("🎭 3D Avatar Updated!");
     }
@@ -131,7 +131,7 @@ export function useAuth() {
   const updateJobClass = (jobClass: "shadow" | "knight" | "berserker") => {
     if (user) {
       const updatedUser = { ...user, jobClass };
-      localStorage.setItem("skillforge_user", JSON.stringify(updatedUser));
+      localStorage.setItem("timebot_user", JSON.stringify(updatedUser));
       setUser(updatedUser);
       toast.success("⚔️ Class Chosen!", {
         description: `Your form has been changed. Arise!`,
@@ -141,13 +141,13 @@ export function useAuth() {
 
   const logout = () => {
     if (user) {
-      localStorage.removeItem("skillforge_user");
+      localStorage.removeItem("timebot_user");
     }
     setUser(null);
   };
 
   const validateLogin = (username: string, password: string): boolean => {
-    const storedPassword = localStorage.getItem(`skillforge_password_${username}`);
+    const storedPassword = localStorage.getItem(`timebot_password_${username}`);
     return storedPassword === password;
   };
 

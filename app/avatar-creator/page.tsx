@@ -162,7 +162,7 @@ export default function AvatarCreatorPage() {
     
     try {
       // Store avatar configuration in localStorage
-      localStorage.setItem("skillforge_avatar_config", JSON.stringify(config));
+      localStorage.setItem("timebot_avatar_config", JSON.stringify(config));
       
       // Update job class
       updateJobClass(config.jobClass);

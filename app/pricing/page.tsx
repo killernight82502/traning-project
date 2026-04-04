@@ -41,7 +41,7 @@ export default function PricingPage() {
       <nav className="fixed top-0 w-full z-50 glass border-b border-gray-700/30 px-6 py-4">
         <div className="max-w-7xl mx-auto flex justify-between items-center">
           <Link href="/" className="text-xl font-bold tracking-tighter text-transparent bg-clip-text bg-gradient-to-r from-orange-400 to-yellow-400">
-            {process.env.NEXT_PUBLIC_SITE_NAME?.toUpperCase() || 'SKILL FORGE'}
+            {process.env.NEXT_PUBLIC_SITE_NAME?.toUpperCase() || 'TIME BOT'}
           </Link>
           <Link 
             href="/" 
