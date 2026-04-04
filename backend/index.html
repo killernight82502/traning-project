@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>AI Task Manager</title>
+</head>
+<body>
+
+<h2>Add Task</h2>
+<input id="task" placeholder="Enter task" />
+<button onclick="addTask()">Add</button>
+
+<h2>Upload Work (Premium)</h2>
+<input type="file" id="file" />
+<button onclick="uploadFile()">Upload</button>
+
+<h2>AI Suggestion</h2>
+<button onclick="getSuggestion()">Get AI Suggestion</button>
+
+<script>
+const userId = 1;
+
+async function addTask() {
+  const title = document.getElementById("task").value;
+  await fetch("http://localhost:3000/add-task", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ userId, title })
+  });
+  alert("Task Added");
+}
+
+async function uploadFile() {
+  const file = document.getElementById("file").files[0];
+  const formData = new FormData();
+  formData.append("file", file);
+  formData.append("userId", userId);
+
+  const res = await fetch("http://localhost:3000/upload", {
+    method: "POST",
+    body: formData
+  });
+
+  const data = await res.json();
+  alert(data.feedback);
+}
+
+async function getSuggestion() {
+  const res = await fetch("http://localhost:3000/ai-suggest", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ userId, progress: "Completed 2 chapters" })
+  });
+
+  const data = await res.json();
+  alert(data.suggestion);
+}
+</script>
+
+</body>
+</html>
