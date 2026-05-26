@@ -1,15 +1,25 @@
 import { useState, useEffect } from "react";
 import { toast } from "sonner";
 
+// Hunter Class Types
+type FreeClass = "shadow" | "knight" | "berserker";
+type PremiumClass = "monarch" | "celestial" | "voidwalker";
+type HunterClass = FreeClass | PremiumClass;
+
 export interface User {
   username: string;
   gender: "male" | "female";
   isPremium: boolean;
   selectedCosmetic: string;
   avatarUrl?: string;
-  jobClass: "shadow" | "knight" | "berserker";
+  jobClass: HunterClass;
   premiumTier?: "starter" | "elite" | "sovereign";
   createdAt: number;
+  hasCreatedAvatar?: boolean; // Track if user completed avatar setup
+  skinTone?: string;
+  hairColor?: string;
+  eyeColor?: string;
+  hairStyle?: string;
 }
 
 // Premium avatar URLs based on tier
@@ -62,7 +72,7 @@ export function useAuth() {
     password: string, 
     gender: "male" | "female" = "male", 
     isPremium: boolean = false,
-    jobClass: "shadow" | "knight" | "berserker" = "shadow"
+    jobClass: HunterClass = "shadow"
   ): boolean => {
     if (!username.trim() || !password.trim()) {
       return false;
@@ -128,13 +138,36 @@ export function useAuth() {
     }
   };
 
-  const updateJobClass = (jobClass: "shadow" | "knight" | "berserker") => {
+  const updateJobClass = (jobClass: HunterClass) => {
     if (user) {
       const updatedUser = { ...user, jobClass };
       localStorage.setItem("timebot_user", JSON.stringify(updatedUser));
       setUser(updatedUser);
       toast.success("⚔️ Class Chosen!", {
         description: `Your form has been changed. Arise!`,
+      });
+    }
+  };
+
+  const updateAvatarConfig = (config: {
+    skinTone?: string;
+    hairColor?: string;
+    eyeColor?: string;
+    hairStyle?: string;
+    avatarUrl?: string;
+    jobClass?: HunterClass;
+    gender?: "male" | "female";
+  }) => {
+    if (user) {
+      const updatedUser = { 
+        ...user, 
+        ...config,
+        hasCreatedAvatar: true 
+      };
+      localStorage.setItem("timebot_user", JSON.stringify(updatedUser));
+      setUser(updatedUser);
+      toast.success("🎭 Avatar Created!", {
+        description: "Your hunter is ready to rise!",
       });
     }
   };
@@ -162,5 +195,6 @@ export function useAuth() {
     updateCosmetic,
     updateAvatarUrl,
     updateJobClass,
+    updateAvatarConfig,
   };
 }

@@ -6,7 +6,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { ArrowLeft, Loader2, Sparkles, Shield, Zap, Flame, RotateCcw, Download, Check } from "lucide-react";
 import Link from "next/link";
 import { AnimatedBackground } from "@/components/animated-background";
-import { Avatar3D } from "@/components/avatar-3d";
+import { Avatar3D, CHARACTER_MODELS } from "@/components/avatar-3d";
 import { toast } from "sonner";
 
 // Customization options
@@ -105,10 +105,11 @@ const DEFAULT_CONFIG: AvatarConfig = {
 };
 
 export default function AvatarCreatorPage() {
-  const { updateAvatarUrl, updateJobClass, isLoggedIn, isLoading: isAuthLoading, user } = useAuth();
+  const { updateAvatarConfig, updateJobClass, isLoggedIn, isLoading: isAuthLoading, user } = useAuth();
   const router = useRouter();
   const [config, setConfig] = useState<AvatarConfig>(DEFAULT_CONFIG);
-  const [activeTab, setActiveTab] = useState<"gender" | "class" | "appearance">("gender");
+  const [activeTab, setActiveTab] = useState<"gender" | "class" | "appearance" | "model">("gender");
+  const [selectedModelUrl, setSelectedModelUrl] = useState("");
   const [isSaving, setIsSaving] = useState(false);
   const [showContent, setShowContent] = useState(false);
   const [previewLevel, setPreviewLevel] = useState(15);
@@ -120,8 +121,15 @@ export default function AvatarCreatorPage() {
       setConfig(prev => ({
         ...prev,
         gender: user.gender || prev.gender,
-        jobClass: user.jobClass || prev.jobClass,
+        jobClass: (user.jobClass as "shadow" | "knight" | "berserker") || prev.jobClass,
+        skinTone: user.skinTone || prev.skinTone,
+        hairColor: user.hairColor || prev.hairColor,
+        eyeColor: user.eyeColor || prev.eyeColor,
+        hairStyle: user.hairStyle || prev.hairStyle,
       }));
+      if (user.avatarUrl) {
+        setSelectedModelUrl(user.avatarUrl);
+      }
     }
   }, [user]);
 
@@ -162,17 +170,22 @@ export default function AvatarCreatorPage() {
     
     try {
       // Store avatar configuration in localStorage
-      localStorage.setItem("timebot_avatar_config", JSON.stringify(config));
+      const avatarData = {
+        ...config,
+        modelUrl: selectedModelUrl,
+      };
+      localStorage.setItem("timebot_avatar_config", JSON.stringify(avatarData));
       
-      // Update job class
-      updateJobClass(config.jobClass);
+      // Use useAuth to properly update the context AND set hasCreatedAvatar to true
+      updateAvatarConfig({
+        ...config,
+        avatarUrl: selectedModelUrl,
+      });
       
-      // Generate a custom avatar URL or use fallback
-      // In a real app, this would save to backend
       await new Promise(resolve => setTimeout(resolve, 1000));
       
       toast.success("⚔️ Avatar Saved!", { 
-        description: "Your custom hunter has been created successfully!",
+        description: "Your character has been created successfully!",
         duration: 3000,
       });
       
@@ -257,10 +270,10 @@ export default function AvatarCreatorPage() {
               {/* Glow ring */}
               <div className="absolute -inset-4 rounded-3xl bg-gradient-to-r from-purple-500/20 to-blue-500/20 blur-2xl animate-pulse-slow" />
               
-              <div className="relative glass rounded-2xl p-8 border border-gray-700/30">
-                <div className="w-64 h-72 mx-auto flex items-center justify-center">
+              <div className="relative glass rounded-2xl p-6 border border-gray-700/30">
+                <div className="w-56 h-56 mx-auto flex items-center justify-center">
                   <Avatar3D 
-                    url="" 
+                    url={selectedModelUrl} 
                     level={previewLevel} 
                     jobClass={config.jobClass}
                     gender={config.gender}
@@ -315,9 +328,10 @@ export default function AvatarCreatorPage() {
             {/* Tab Navigation */}
             <div className="flex gap-2 mb-8">
               {[
+                { id: "model", label: "3D Model", icon: "🎭" },
                 { id: "gender", label: "Gender", icon: "👤" },
                 { id: "class", label: "Class", icon: "⚔️" },
-                { id: "appearance", label: "Appearance", icon: "🎨" },
+                { id: "appearance", label: "Look", icon: "🎨" },
               ].map((tab) => (
                 <button
                   key={tab.id}
@@ -329,12 +343,79 @@ export default function AvatarCreatorPage() {
                   }`}
                 >
                   <span>{tab.icon}</span>
-                  <span>{tab.label}</span>
+                  <span className="hidden sm:inline">{tab.label}</span>
                 </button>
               ))}
             </div>
 
-            {/* Gender Selection */}
+            {/* 3D Model Selection */}
+            {activeTab === "model" && (
+              <div className="space-y-6 animate-fade-in-up">
+                <div>
+                  <h3 className="text-lg font-bold text-white mb-2">Choose Your 3D Character</h3>
+                  <p className="text-gray-400 text-sm mb-6">Select a high-quality 3D character model. You can also use ReadyPlayer.me to create your own!</p>
+                </div>
+                
+                {/* Model Grid */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  {CHARACTER_MODELS[config.gender].map((model) => (
+                    <button
+                      key={model.id}
+                      onClick={() => {
+                        setSelectedModelUrl(model.url);
+                        toast.success(`Selected: ${model.name}`);
+                      }}
+                      className={`relative p-4 rounded-2xl transition-all duration-300 text-left ${
+                        selectedModelUrl === model.url
+                          ? "bg-gradient-to-br from-purple-600/30 to-blue-600/30 border-2 border-purple-500 scale-105"
+                          : "glass border border-gray-700/50 hover:border-purple-500/50"
+                      }`}
+                    >
+                      <div className="flex flex-col items-center gap-3">
+                        <div className="w-20 h-20 rounded-xl bg-gradient-to-br from-purple-600/40 to-blue-600/40 flex items-center justify-center">
+                          <span className="text-4xl">🎮</span>
+                        </div>
+                        <div className="text-center">
+                          <h4 className="font-bold text-white">{model.name}</h4>
+                          <p className="text-xs text-gray-400">{model.description}</p>
+                        </div>
+                      </div>
+                      {selectedModelUrl === model.url && (
+                        <div className="absolute top-3 right-3 w-6 h-6 bg-green-500 rounded-full flex items-center justify-center">
+                          <Check className="w-4 h-4 text-white" />
+                        </div>
+                      )}
+                    </button>
+                  ))}
+                </div>
+
+                {/* Custom URL Input */}
+                <div className="mt-6 p-4 rounded-xl bg-gradient-to-r from-purple-900/30 to-blue-900/30 border border-purple-500/30">
+                  <h4 className="font-semibold text-purple-400 mb-3 flex items-center gap-2">
+                    <Sparkles className="w-4 h-4" />
+                    Use Your Own 3D Character
+                  </h4>
+                  <p className="text-sm text-gray-400 mb-3">
+                    Create a custom character at <a href="https://readyplayer.me" target="_blank" className="text-purple-400 underline">ReadyPlayer.me</a>, then paste your avatar URL (.glb):
+                  </p>
+                  <input
+                    type="text"
+                    value={selectedModelUrl}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      setSelectedModelUrl(val);
+                    }}
+                    placeholder="https://models.readyplayer.me/...glb"
+                    className="w-full px-4 py-3 rounded-lg bg-gray-900/80 border border-gray-700 text-white placeholder-gray-500 focus:border-purple-500 focus:outline-none"
+                  />
+                  <div className="mt-2 p-2 rounded-lg bg-red-900/30 border border-red-500/30">
+                    <p className="text-xs text-red-400">
+                      ⚠️ <strong>Important:</strong> Only 3D model files (.glb) are supported. Images (.jpg, .png, .webp) will NOT work. Make sure your URL ends with <code className="bg-red-900/50 px-1 rounded">.glb</code>
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
             {activeTab === "gender" && (
               <div className="space-y-6 animate-fade-in-up">
                 <div>

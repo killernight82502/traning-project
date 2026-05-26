@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { toast } from "sonner";
 import {
   DIFFICULTY_RANKS,
@@ -10,6 +10,7 @@ import {
   getLevelFromXp,
   calculateTaskXp,
   ACHIEVEMENTS,
+  ACHIEVEMENT_KEYS,
 } from "@/lib/game-constants";
 
 export interface Task {
@@ -22,6 +23,8 @@ export interface Task {
   completedAt?: number;
   xpReward: number;
   createdAt: number;
+  recurring?: boolean;
+  recurringInterval?: "daily" | "weekly";
 }
 
 export interface PlayerStats {
@@ -31,6 +34,14 @@ export interface PlayerStats {
   currentStreak: number;
   lastTaskDate?: number;
   unlockedAchievements: string[];
+  focusSessionsCount: number;
+  lateNightTasks: number;
+  earlyBirdTasks: number;
+  classTaskCounts: {
+    shadow: number;
+    knight: number;
+    berserker: number;
+  };
 }
 
 export interface GameState {
@@ -39,11 +50,17 @@ export interface GameState {
   addTask: (task: Omit<Task, "id" | "completed" | "xpReward" | "createdAt">) => void;
   completeTask: (taskId: string, awardedXp?: number) => void;
   deleteTask: (taskId: string) => void;
+  editTask: (taskId: string, updates: Partial<Omit<Task, "id" | "createdAt" | "xpReward">>) => void;
   getTotalXp: () => number;
   getCurrentLevel: () => number;
   getActiveTasks: () => Task[];
   getCompletedTasks: () => Task[];
   getNewAchievements: () => typeof ACHIEVEMENTS[keyof typeof ACHIEVEMENTS][];
+  addBonusXp: (xp: number) => void;
+  incrementFocusSessions: () => void;
+  exportData: () => string;
+  importData: (jsonString: string) => boolean;
+  resetProgress: () => void;
 }
 
 const STORAGE_KEY = "solo_leveling_game";
@@ -56,8 +73,14 @@ export const useGameState = (): GameState => {
     completedTasks: 0,
     currentStreak: 0,
     unlockedAchievements: [],
+    focusSessionsCount: 0,
+    lateNightTasks: 0,
+    earlyBirdTasks: 0,
+    classTaskCounts: { shadow: 0, knight: 0, berserker: 0 },
   });
   const [isLoaded, setIsLoaded] = useState(false);
+  const tasksRef = useRef(tasks);
+  tasksRef.current = tasks;
 
   // Load from localStorage
   useEffect(() => {
@@ -129,6 +152,8 @@ export const useGameState = (): GameState => {
       const xpReward = calculateTaskXp(task.durationMinutes, task.difficulty);
       const newTask: Task = {
         ...task,
+        recurring: task.recurring ?? false,
+        recurringInterval: task.recurringInterval,
         id: Date.now().toString(),
         completed: false,
         xpReward,
@@ -140,7 +165,11 @@ export const useGameState = (): GameState => {
     []
   );
 
-  const completeTask = useCallback((taskId: string, awardedXp?: number) => {
+  const completeTask = useCallback((taskId: string, awardedXp?: number, jobClass: "shadow" | "knight" | "berserker" = "shadow") => {
+    const currentHour = new Date().getHours();
+    const isLateNight = currentHour >= 0 && currentHour < 4;
+    const isEarlyBird = currentHour >= 4 && currentHour < 8;
+
     setTasks((prev) =>
       prev.map((task) =>
         task.id === taskId
@@ -150,23 +179,23 @@ export const useGameState = (): GameState => {
     );
 
     setStats((prev) => {
-      const task = tasks.find((t) => t.id === taskId);
+      const task = tasksRef.current.find((t) => t.id === taskId);
       if (!task) return prev;
 
       const finalXp = awardedXp !== undefined ? awardedXp : task.xpReward;
       const newTotalXp = prev.totalXp + finalXp;
+      const newCompletedTasks = prev.completedTasks + 1;
       const { level } = getLevelFromXp(newTotalXp);
       const newUnlockedAchievements = [...prev.unlockedAchievements];
 
-      // Level Up Toast
-      if (level > prev.level) {
+      const levelUp = level > prev.level;
+      if (levelUp) {
         toast.success(`Level Up! You are now Level ${level}`, {
           description: "Your power has grown. Arise!",
           icon: "⚡",
         });
       }
 
-      // Check for new achievements
       const checkAndAddAchievement = (id: string, name: string) => {
         if (!newUnlockedAchievements.includes(id)) {
           newUnlockedAchievements.push(id);
@@ -180,11 +209,14 @@ export const useGameState = (): GameState => {
       if (prev.completedTasks === 0) {
         checkAndAddAchievement("first_task", "Awakening");
       }
-      if (prev.completedTasks + 1 === 50) {
+      if (newCompletedTasks === 50) {
         checkAndAddAchievement("fifty_tasks", "Rising Hunter");
       }
-      if (prev.completedTasks + 1 === 100) {
+      if (newCompletedTasks === 100) {
         checkAndAddAchievement("hundred_tasks", "Veteran Hunter");
+      }
+      if (newCompletedTasks === 500) {
+        checkAndAddAchievement("grind_master", "Grind Master");
       }
       if (level >= 10 && prev.level < 10) {
         checkAndAddAchievement("level_10", "Ascension");
@@ -192,25 +224,104 @@ export const useGameState = (): GameState => {
       if (level >= 25 && prev.level < 25) {
         checkAndAddAchievement("level_25", "Realm Breaker");
       }
+      if (level >= 50 && prev.level < 50) {
+        checkAndAddAchievement("level_50", "Monarch Ascendant");
+      }
       if (task.difficulty === "S") {
         checkAndAddAchievement("s_rank_task", "Legendary");
+        if (!newUnlockedAchievements.includes("first_s_rank")) {
+          checkAndAddAchievement("first_s_rank", "S-Rank Hunter");
+        }
       }
-      if (prev.currentStreak === 10) {
+      if (prev.currentStreak === 10 || prev.currentStreak === 11) {
         checkAndAddAchievement("ten_day_streak", "Perseverance");
+      }
+      if (prev.currentStreak === 20 || prev.currentStreak === 21) {
+        checkAndAddAchievement("twenty_day_streak", "Unstoppable Force");
+      }
+      if (prev.currentStreak === 30 || prev.currentStreak === 31) {
+        checkAndAddAchievement("thirty_day_streak", "Iron Will");
+      }
+
+      const newClassCounts = { ...prev.classTaskCounts };
+      if (jobClass === "shadow") {
+        newClassCounts.shadow += 1;
+        if (newClassCounts.shadow === 25) {
+          checkAndAddAchievement("dark_achieve", "Shadow Walker");
+        }
+      } else if (jobClass === "knight") {
+        newClassCounts.knight += 1;
+        if (newClassCounts.knight === 25) {
+          checkAndAddAchievement("knight_champion", "Knight Champion");
+        }
+      } else {
+        newClassCounts.berserker += 1;
+        if (newClassCounts.berserker === 25) {
+          checkAndAddAchievement("berserker_fury", "Berserker Fury");
+        }
       }
 
       return {
         ...prev,
         totalXp: newTotalXp,
         level,
-        completedTasks: prev.completedTasks + 1,
+        completedTasks: newCompletedTasks,
         unlockedAchievements: newUnlockedAchievements,
+        lateNightTasks: isLateNight ? prev.lateNightTasks + 1 : prev.lateNightTasks,
+        earlyBirdTasks: isEarlyBird ? prev.earlyBirdTasks + 1 : prev.earlyBirdTasks,
+        classTaskCounts: newClassCounts,
       };
     });
-  }, [tasks]);
+  }, []);
+
+  const addBonusXp = useCallback((xp: number) => {
+    setStats((prev) => {
+      const newTotalXp = prev.totalXp + xp;
+      const { level } = getLevelFromXp(newTotalXp);
+      
+      if (level > prev.level) {
+        toast.success(`Level Up! You are now Level ${level}`, {
+          description: "Your power has grown. Arise!",
+          icon: "⚡",
+        });
+      }
+      
+      return {
+        ...prev,
+        totalXp: newTotalXp,
+        level,
+      };
+    });
+  }, []);
+
+  const incrementFocusSessions = useCallback(() => {
+    setStats((prev) => {
+      const newCount = prev.focusSessionsCount + 1;
+      if (newCount === 10 && !prev.unlockedAchievements.includes("focus_champion")) {
+        toast.success("New Achievement Unlocked!", {
+          description: "Focus Champion: Your focus is unmatched.",
+          icon: "🏆",
+        });
+        return {
+          ...prev,
+          focusSessionsCount: newCount,
+          unlockedAchievements: [...prev.unlockedAchievements, "focus_champion"],
+        };
+      }
+      return { ...prev, focusSessionsCount: newCount };
+    });
+  }, []);
 
   const deleteTask = useCallback((taskId: string) => {
     setTasks((prev) => prev.filter((t) => t.id !== taskId));
+  }, []);
+
+  const editTask = useCallback((taskId: string, updates: Partial<Omit<Task, "id" | "createdAt" | "xpReward">>) => {
+    setTasks((prev) =>
+      prev.map((task) =>
+        task.id === taskId ? { ...task, ...updates } : task
+      )
+    );
   }, []);
 
   const getTotalXp = useCallback(() => stats.totalXp, [stats.totalXp]);
@@ -236,16 +347,71 @@ export const useGameState = (): GameState => {
       .filter(Boolean) as typeof ACHIEVEMENTS[keyof typeof ACHIEVEMENTS][];
   }, [stats.unlockedAchievements]);
 
+  const exportData = useCallback(() => {
+    const data = {
+      tasks,
+      stats,
+      exportedAt: new Date().toISOString(),
+      version: "1.0",
+    };
+    return JSON.stringify(data, null, 2);
+  }, [tasks, stats]);
+
+  const importData = useCallback((jsonString: string) => {
+    try {
+      const data = JSON.parse(jsonString);
+      if (data.tasks && data.stats) {
+        setTasks(data.tasks);
+        setStats(data.stats);
+        toast.success("Data imported successfully!", {
+          description: "Your progress has been restored.",
+          icon: "📥",
+        });
+        return true;
+      }
+      toast.error("Invalid data format");
+      return false;
+    } catch {
+      toast.error("Failed to import data");
+      return false;
+    }
+  }, []);
+
+  const resetProgress = useCallback(() => {
+    setTasks([]);
+    setStats({
+      totalXp: 0,
+      level: 1,
+      completedTasks: 0,
+      currentStreak: 0,
+      unlockedAchievements: [],
+      focusSessionsCount: 0,
+      lateNightTasks: 0,
+      earlyBirdTasks: 0,
+      classTaskCounts: { shadow: 0, knight: 0, berserker: 0 },
+    });
+    localStorage.removeItem(STORAGE_KEY);
+    toast.success("Progress reset", {
+      description: "Your journey starts anew.",
+    });
+  }, []);
+
   return {
     tasks,
     stats,
     addTask,
     completeTask,
     deleteTask,
+    editTask,
     getTotalXp,
     getCurrentLevel,
     getActiveTasks,
     getCompletedTasks,
     getNewAchievements,
+    addBonusXp,
+    incrementFocusSessions,
+    exportData,
+    importData,
+    resetProgress,
   };
 };

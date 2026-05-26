@@ -1,6 +1,6 @@
 "use client";
 
-import { getLevelFromXp } from "@/lib/game-constants";
+import { getLevelFromXp, getTitleForLevel, getTitleColor } from "@/lib/game-constants";
 import { Avatar3D } from "./avatar-3d";
 import { useAuth } from "@/hooks/use-auth";
 import { COSMETICS } from "@/lib/premium-cosmetics";
@@ -21,11 +21,17 @@ export function PlayerHeader({
   const { level, currentXp, nextLevelXp } = getLevelFromXp(totalXp);
   const progressPercent = (currentXp / nextLevelXp) * 100;
   const { user } = useAuth();
-  const cosmetic = user?.selectedCosmetic ? COSMETICS[user.selectedCosmetic] : COSMETICS.default;
+  const cosmetic = user?.selectedCosmetic && COSMETICS[user.selectedCosmetic] 
+    ? COSMETICS[user.selectedCosmetic] 
+    : COSMETICS.default;
   const [isHovered, setIsHovered] = useState(false);
+  const title = getTitleForLevel(level);
+  const titleColor = getTitleColor(level);
 
   // Get level-based styling
   const getLevelStyle = () => {
+    if (level >= 50) return { color: "from-amber-600 via-yellow-500 to-amber-400", glow: "shadow-amber-500/50", border: "border-amber-500/50" };
+    if (level >= 40) return { color: "from-purple-600 via-pink-500 to-purple-500", glow: "shadow-purple-500/50", border: "border-purple-500/50" };
     if (level >= 30) return { color: "from-red-600 via-orange-500 to-yellow-500", glow: "shadow-red-500/50", border: "border-red-500/50" };
     if (level >= 20) return { color: "from-cyan-600 via-blue-500 to-purple-500", glow: "shadow-cyan-500/50", border: "border-cyan-500/50" };
     if (level >= 10) return { color: "from-blue-600 via-indigo-500 to-purple-500", glow: "shadow-blue-500/50", border: "border-blue-500/50" };
@@ -80,7 +86,7 @@ export function PlayerHeader({
                 className={`absolute -inset-2 rounded-xl bg-gradient-to-r ${levelStyle.color} opacity-50 blur-md animate-pulse-slow`}
               />
               <Avatar3D 
-                url={user?.avatarUrl || "https://models.readyplayer.me/64b584a51e5acc6fdf5c3b1a.glb"} 
+                url=""
                 level={level} 
                 jobClass={user?.jobClass || "shadow"}
                 isPremium={user?.isPremium || false}
@@ -98,7 +104,7 @@ export function PlayerHeader({
 
           {/* Stats Section */}
           <div className="flex-1">
-            <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center justify-between mb-2">
               <div>
                 <div className="text-sm text-gray-400 mb-1 flex items-center gap-2">
                   <span className="w-1.5 h-1.5 bg-purple-500 rounded-full animate-pulse" />
@@ -106,6 +112,9 @@ export function PlayerHeader({
                 </div>
                 <div className={`text-6xl font-black bg-gradient-to-r ${levelStyle.color} bg-clip-text text-transparent animate-gradient`}>
                   {level}
+                </div>
+                <div className={`${titleColor} text-sm font-semibold mt-1`}>
+                  {title}
                 </div>
               </div>
 

@@ -121,7 +121,7 @@ app.post("/upload", checkPremium, upload.single("file"), async (req, res) => {
             { type: "text", text: "Analyze this work and give feedback" },
             {
               type: "image_url",
-              image_url: { url: `http://localhost:3000/${imagePath}` },
+              image_url: { url: `http://localhost:3001/${imagePath}` },
             },
           ],
         },
@@ -149,6 +149,6 @@ app.post("/upgrade", (req, res) => {
 // ===============================
 // START SERVER
 // ===============================
-app.listen(3000, () => {
-  console.log("Server running on http://localhost:3000");
+app.listen(3001, () => {
+  console.log("Server running on http://localhost:3001");
 });

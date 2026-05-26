@@ -6,7 +6,8 @@ export interface Cosmetic {
   borderColor: string;
   glowColor: string;
   isPremium: boolean;
-  frameStyle: "default" | "gold" | "diamond" | "celestial" | "shadow" | "infernal";
+  frameStyle: "default" | "gold" | "diamond" | "celestial" | "shadow" | "infernal" | "aurora" | "void" | "solar";
+  requiredLevel?: number;
 }
 
 export const COSMETICS: Record<string, Cosmetic> = {
@@ -70,7 +71,46 @@ export const COSMETICS: Record<string, Cosmetic> = {
     isPremium: true,
     frameStyle: "infernal",
   },
+  aurora: {
+    id: "aurora",
+    name: "Aurora Borealis",
+    description: "Magical northern lights frame",
+    color: "#10b981",
+    borderColor: "#34d399",
+    glowColor: "rgba(16, 185, 129, 0.6)",
+    isPremium: true,
+    frameStyle: "aurora",
+    requiredLevel: 15,
+  },
+  void: {
+    id: "void",
+    name: "Void Walker",
+    description: "Darkness beyond the abyss",
+    color: "#1e1b4b",
+    borderColor: "#6366f1",
+    glowColor: "rgba(99, 102, 241, 0.8)",
+    isPremium: true,
+    frameStyle: "void",
+    requiredLevel: 25,
+  },
+  solar: {
+    id: "solar",
+    name: "Solar Flare",
+    description: "Blazing sun corona effect",
+    color: "#f59e0b",
+    borderColor: "#fbbf24",
+    glowColor: "rgba(245, 158, 11, 0.7)",
+    isPremium: true,
+    frameStyle: "solar",
+    requiredLevel: 30,
+  },
 };
 
 export const PREMIUM_COSMETICS = Object.values(COSMETICS).filter(c => c.isPremium);
 export const FREE_COSMETICS = Object.values(COSMETICS).filter(c => !c.isPremium);
+
+export const getCosmeticForLevel = (level: number): Cosmetic[] => {
+  return Object.values(COSMETICS).filter(c => 
+    c.requiredLevel === undefined || c.requiredLevel <= level
+  );
+};

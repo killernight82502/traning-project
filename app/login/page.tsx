@@ -5,6 +5,121 @@ import { useAuth } from "@/hooks/use-auth";
 import { useRouter } from "next/navigation";
 import { AnimatedBackground } from "@/components/animated-background";
 
+// Moving Login Button Component
+function MovingLoginButton({ 
+  onClick, 
+  isLoading, 
+  isNewUser,
+  isValid
+}: { 
+  onClick: () => void; 
+  isLoading: boolean;
+  isNewUser: boolean;
+  isValid: boolean;
+}) {
+  const [position, setPosition] = useState({ x: 0, y: 0 });
+  const [rotation, setRotation] = useState(0);
+  const [isMoving, setIsMoving] = useState(false);
+  const buttonRef = useRef<HTMLButtonElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  const moveButton = useCallback(() => {
+    if (isValid || isLoading) return;
+    
+    setIsMoving(true);
+    const moves = [
+      { x: -80, y: -40, r: -15 },
+      { x: 80, y: -50, r: 15 },
+      { x: -60, y: 40, r: -10 },
+      { x: 70, y: 30, r: 20 },
+      { x: -90, y: 0, r: -25 },
+      { x: 90, y: -20, r: 25 },
+    ];
+    
+    const randomMove = moves[Math.floor(Math.random() * moves.length)];
+    setPosition({ x: randomMove.x, y: randomMove.y });
+    setRotation(randomMove.r);
+    
+    // Return to center after animation
+    setTimeout(() => {
+      setPosition({ x: 0, y: 0 });
+      setRotation(0);
+      setIsMoving(false);
+    }, 600);
+  }, [isValid, isLoading]);
+
+  const handleMouseEnter = () => {
+    if (!isValid && !isLoading) {
+      moveButton();
+    }
+  };
+
+  const handleClick = (e: React.MouseEvent) => {
+    if (!isValid) {
+      e.preventDefault();
+      moveButton();
+      return;
+    }
+    onClick();
+  };
+
+  return (
+    <div ref={containerRef} className="relative w-full flex justify-center items-center py-2">
+      <button
+        ref={buttonRef}
+        type="button"
+        onClick={handleClick}
+        onMouseEnter={handleMouseEnter}
+        disabled={isLoading}
+        className={`w-full max-w-sm
+          ${isMoving ? 'transition-all duration-300 ease-out' : 'transition-all duration-500 ease-out'}
+          ${isValid 
+            ? 'bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-400 hover:to-emerald-400 shadow-lg shadow-green-500/30 cursor-pointer' 
+            : 'bg-gradient-to-r from-red-500 to-orange-500 shadow-lg shadow-red-500/30 cursor-not-allowed'}
+          text-black font-bold py-4 px-4 rounded-xl text-lg
+          disabled:opacity-50 disabled:cursor-not-allowed
+          active:scale-95
+        `}
+        style={{
+          transform: `translate(${position.x}px, ${position.y}px) rotate(${rotation}deg)`,
+        }}
+      >
+        <span className="relative z-10 flex items-center justify-center gap-2">
+          {isLoading ? (
+            <>
+              <div className="w-5 h-5 border-2 border-black/20 border-t-black rounded-full animate-spin" />
+              Connecting...
+            </>
+          ) : isNewUser ? (
+            <>
+              <span className="transition-transform duration-300 group-hover:rotate-12">⚔️</span>
+              Begin Journey
+            </>
+          ) : (
+            <>
+              <span className="transition-transform duration-300 group-hover:translate-y-[-2px]">🚀</span>
+              Ascend
+            </>
+          )}
+        </span>
+        
+        {/* Shine effect */}
+        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/40 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-700" />
+      </button>
+      
+      {/* Error message when button moves */}
+      {isMoving && !isValid && (
+        <div className="absolute -bottom-8 left-0 right-0 text-center">
+          <span className="text-red-400 text-sm font-semibold animate-pulse flex items-center justify-center gap-1">
+            <span>😜</span> Nice try! Fill in the form first!
+            <span>😜</span>
+          </span>
+        </div>
+      )}
+    </div>
+  );
+}
+
 // Interactive particle that follows mouse
 function InteractiveParticles() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -103,45 +218,122 @@ function InteractiveParticles() {
   return <canvas ref={canvasRef} className="fixed inset-0 pointer-events-none z-20" />;
 }
 
-// Animated class icon
-function ClassIcon({ type, isSelected, onClick }: { type: 'shadow' | 'knight' | 'berserker', isSelected: boolean, onClick: () => void }) {
-  const icons = {
-    shadow: '🗡️',
-    knight: '⚔️',
-    berserker: '🪓'
-  };
-  const colors = {
-    shadow: 'from-purple-500 to-violet-600',
-    knight: 'from-blue-500 to-cyan-600',
-    berserker: 'from-red-500 to-orange-600'
-  };
-  const names = {
-    shadow: 'Shadow',
-    knight: 'Knight',
-    berserker: 'Berserker'
-  };
+// Hunter Class Types
+type FreeClass = 'shadow' | 'knight' | 'berserker';
+type PremiumClass = 'monarch' | 'celestial' | 'voidwalker';
+type HunterClass = FreeClass | PremiumClass;
 
+// Class definitions with stats and descriptions
+const HUNTER_CLASSES: Record<HunterClass, {
+  name: string;
+  icon: string;
+  colors: string;
+  description: string;
+  stats: { power: number; speed: number; defense: number; magic: number };
+  abilities: string[];
+  isPremium: boolean;
+}> = {
+  // Free Classes
+  shadow: {
+    name: 'Shadow Hunter',
+    icon: '🗡️',
+    colors: 'from-purple-500 to-violet-600',
+    description: 'Masters of stealth and assassination',
+    stats: { power: 85, speed: 95, defense: 40, magic: 60 },
+    abilities: ['Shadow Step', 'Backstab', 'Smoke Bomb'],
+    isPremium: false,
+  },
+  knight: {
+    name: 'Holy Knight',
+    icon: '⚔️',
+    colors: 'from-blue-500 to-cyan-600',
+    description: 'Defenders of justice with divine power',
+    stats: { power: 70, speed: 60, defense: 90, magic: 50 },
+    abilities: ['Holy Shield', 'Divine Strike', 'Heal'],
+    isPremium: false,
+  },
+  berserker: {
+    name: 'Berserker',
+    icon: '🪓',
+    colors: 'from-red-500 to-orange-600',
+    description: 'Unstoppable warriors of rage',
+    stats: { power: 95, speed: 75, defense: 30, magic: 20 },
+    abilities: ['Rage Mode', 'Whirlwind', 'Battle Cry'],
+    isPremium: false,
+  },
+  // Premium Classes
+  monarch: {
+    name: 'Shadow Monarch',
+    icon: '👑',
+    colors: 'from-yellow-400 via-amber-500 to-orange-500',
+    description: 'The supreme ruler of shadows. Can summon shadow soldiers.',
+    stats: { power: 100, speed: 90, defense: 85, magic: 100 },
+    abilities: ['Arise', 'Shadow Army', 'Monarch\'s Domain', 'Absolute Command'],
+    isPremium: true,
+  },
+  celestial: {
+    name: 'Celestial Being',
+    icon: '✨',
+    colors: 'from-cyan-300 via-blue-400 to-purple-500',
+    description: 'Ascended beings with cosmic power',
+    stats: { power: 85, speed: 95, defense: 75, magic: 100 },
+    abilities: ['Starfall', 'Cosmic Shield', 'Time Warp', 'Nebula Blast'],
+    isPremium: true,
+  },
+  voidwalker: {
+    name: 'Void Walker',
+    icon: '🌑',
+    colors: 'from-gray-800 via-purple-900 to-black',
+    description: 'Masters of void magic and dimensional travel',
+    stats: { power: 90, speed: 85, defense: 70, magic: 100 },
+    abilities: ['Void Portal', 'Dark Matter', 'Reality Tear', 'Abyssal Gaze'],
+    isPremium: true,
+  },
+};
+
+// Animated class icon component
+function ClassIcon({ 
+  type, 
+  isSelected, 
+  onClick, 
+  isLocked 
+}: { 
+  type: HunterClass; 
+  isSelected: boolean; 
+  onClick: () => void;
+  isLocked?: boolean;
+}) {
+  const classData = HUNTER_CLASSES[type];
+  
   return (
     <button
       type="button"
       onClick={onClick}
-      className={`relative group flex flex-col items-center gap-2 p-4 rounded-2xl transition-all duration-500 ${
-        isSelected 
-          ? 'scale-110' 
-          : 'hover:scale-105 opacity-70 hover:opacity-100'
+      disabled={isLocked}
+      className={`relative group flex flex-col items-center gap-2 p-3 rounded-2xl transition-all duration-500 ${
+        isLocked 
+          ? 'opacity-40 cursor-not-allowed grayscale'
+          : isSelected 
+            ? 'scale-110' 
+            : 'hover:scale-105 opacity-70 hover:opacity-100'
       }`}
     >
+      {/* Premium glow effect */}
+      {classData.isPremium && !isLocked && (
+        <div className={`absolute inset-0 rounded-2xl bg-gradient-to-br ${classData.colors} opacity-30 blur-xl animate-pulse`} />
+      )}
+      
       {/* Glow ring */}
-      <div className={`absolute inset-0 rounded-2xl bg-gradient-to-br ${colors[type]} opacity-0 ${isSelected ? 'opacity-50' : 'group-hover:opacity-30'} blur-xl transition-all duration-500`} />
+      <div className={`absolute inset-0 rounded-2xl bg-gradient-to-br ${classData.colors} opacity-0 ${isSelected ? 'opacity-50' : 'group-hover:opacity-30'} blur-xl transition-all duration-500`} />
       
       {/* Icon container */}
-      <div className={`relative w-16 h-16 rounded-xl flex items-center justify-center text-3xl transition-all duration-500 ${
+      <div className={`relative w-14 h-14 rounded-xl flex items-center justify-center text-2xl transition-all duration-500 ${
         isSelected 
-          ? `bg-gradient-to-br ${colors[type]} shadow-lg` 
+          ? `bg-gradient-to-br ${classData.colors} shadow-lg ${classData.isPremium ? 'shadow-yellow-500/50' : ''}` 
           : 'glass border border-gray-700/50 group-hover:border-gray-600/50'
       }`}>
         <span className={`transition-transform duration-500 ${isSelected ? 'animate-bounce' : 'group-hover:scale-110'}`}>
-          {icons[type]}
+          {classData.icon}
         </span>
         
         {/* Selection indicator */}
@@ -150,17 +342,35 @@ function ClassIcon({ type, isSelected, onClick }: { type: 'shadow' | 'knight' | 
             <span className="text-xs">✓</span>
           </div>
         )}
+        
+        {/* Premium badge */}
+        {classData.isPremium && !isLocked && (
+          <div className="absolute -top-1 -left-1 w-5 h-5 bg-gradient-to-r from-yellow-400 to-amber-500 rounded-full flex items-center justify-center animate-pulse">
+            <span className="text-[10px]">⭐</span>
+          </div>
+        )}
+        
+        {/* Lock icon */}
+        {isLocked && (
+          <div className="absolute inset-0 bg-black/60 rounded-xl flex items-center justify-center">
+            <span className="text-xl">🔒</span>
+          </div>
+        )}
       </div>
       
-      <span className={`text-sm font-bold transition-colors duration-300 ${isSelected ? 'text-white' : 'text-gray-400 group-hover:text-white'}`}>
-        {names[type]}
+      <span className={`text-xs font-bold transition-colors duration-300 ${isSelected ? 'text-white' : 'text-gray-400 group-hover:text-white'}`}>
+        {classData.name}
       </span>
+      
+      {classData.isPremium && !isLocked && (
+        <span className="text-[10px] text-yellow-400 font-semibold">PREMIUM</span>
+      )}
     </button>
   );
 }
 
 // Animated stat bar
-function StatBar({ label, value, color, delay }: { label: string, value: number, color: string, delay: number }) {
+function StatBar({ label, value, color, delay, isPremium }: { label: string, value: number, color: string, delay: number, isPremium?: boolean }) {
   const [width, setWidth] = useState(0);
   
   useEffect(() => {
@@ -170,14 +380,14 @@ function StatBar({ label, value, color, delay }: { label: string, value: number,
 
   return (
     <div className="flex items-center gap-2">
-      <span className="text-xs text-gray-400 w-12">{label}</span>
+      <span className={`text-xs w-10 ${isPremium ? 'text-yellow-400' : 'text-gray-400'}`}>{label}</span>
       <div className="flex-1 h-2 bg-gray-800/50 rounded-full overflow-hidden">
         <div 
-          className={`h-full rounded-full bg-gradient-to-r ${color} transition-all duration-1000 ease-out`}
+          className={`h-full rounded-full bg-gradient-to-r ${color} transition-all duration-1000 ease-out ${isPremium ? 'shadow-lg shadow-yellow-500/30' : ''}`}
           style={{ width: `${width}%` }}
         />
       </div>
-      <span className="text-xs text-white font-mono w-8">{width}</span>
+      <span className={`text-xs font-mono w-6 ${isPremium ? 'text-yellow-400' : 'text-white'}`}>{width}</span>
     </div>
   );
 }
@@ -210,7 +420,7 @@ export default function LoginPage() {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [gender, setGender] = useState<"male" | "female">("male");
-  const [jobClass, setJobClass] = useState<"shadow" | "knight" | "berserker">("shadow");
+  const [jobClass, setJobClass] = useState<HunterClass>("shadow");
   const [isPremium, setIsPremium] = useState(false);
   const [isNewUser, setIsNewUser] = useState(true);
   const [error, setError] = useState("");
@@ -220,6 +430,7 @@ export default function LoginPage() {
   const [passwordStrength, setPasswordStrength] = useState(0);
   const [showPassword, setShowPassword] = useState(false);
   const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
+  const [showPremiumPreview, setShowPremiumPreview] = useState(false);
   
   const { login, validateLogin } = useAuth();
   const router = useRouter();
@@ -270,14 +481,16 @@ export default function LoginPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
+    
+    // Validate before submitting
+    if (!username.trim() || !password.trim()) {
+      setError("Please enter both hunter name and power level");
+      return;
+    }
+    
     setIsLoading(true);
 
     try {
-      if (!username.trim() || !password.trim()) {
-        setError("Please enter both hunter name and power level");
-        setIsLoading(false);
-        return;
-      }
 
       if (isNewUser) {
         if (login(username, password, gender, isPremium, jobClass)) {
@@ -309,12 +522,6 @@ export default function LoginPage() {
       setError("An error occurred. Please try again.");
       setIsLoading(false);
     }
-  };
-
-  const classStats = {
-    shadow: { power: 85, speed: 95, defense: 40 },
-    knight: { power: 70, speed: 60, defense: 90 },
-    berserker: { power: 95, speed: 75, defense: 30 }
   };
 
   return (
@@ -534,17 +741,83 @@ export default function LoginPage() {
                       <label className="block text-orange-400 text-sm font-semibold mb-3 flex items-center gap-2">
                         <span>⚔️</span> Choose Your Class
                       </label>
-                      <div className="flex justify-center gap-4">
-                        <ClassIcon type="shadow" isSelected={jobClass === 'shadow'} onClick={() => setJobClass('shadow')} />
-                        <ClassIcon type="knight" isSelected={jobClass === 'knight'} onClick={() => setJobClass('knight')} />
-                        <ClassIcon type="berserker" isSelected={jobClass === 'berserker'} onClick={() => setJobClass('berserker')} />
+                      
+                      {/* Free Classes */}
+                      <div className="mb-4">
+                        <p className="text-xs text-gray-500 mb-2">Free Classes</p>
+                        <div className="flex justify-center gap-3">
+                          <ClassIcon type="shadow" isSelected={jobClass === 'shadow'} onClick={() => setJobClass('shadow')} />
+                          <ClassIcon type="knight" isSelected={jobClass === 'knight'} onClick={() => setJobClass('knight')} />
+                          <ClassIcon type="berserker" isSelected={jobClass === 'berserker'} onClick={() => setJobClass('berserker')} />
+                        </div>
+                      </div>
+                      
+                      {/* Premium Classes */}
+                      <div className="relative">
+                        <p className="text-xs text-yellow-500 mb-2 flex items-center gap-1">
+                          <span>⭐</span> Premium Classes {isPremium ? '(Unlocked)' : '(Locked)'}
+                        </p>
+                        <div className="flex justify-center gap-3">
+                          <ClassIcon 
+                            type="monarch" 
+                            isSelected={jobClass === 'monarch'} 
+                            onClick={() => isPremium && setJobClass('monarch')} 
+                            isLocked={!isPremium}
+                          />
+                          <ClassIcon 
+                            type="celestial" 
+                            isSelected={jobClass === 'celestial'} 
+                            onClick={() => isPremium && setJobClass('celestial')} 
+                            isLocked={!isPremium}
+                          />
+                          <ClassIcon 
+                            type="voidwalker" 
+                            isSelected={jobClass === 'voidwalker'} 
+                            onClick={() => isPremium && setJobClass('voidwalker')} 
+                            isLocked={!isPremium}
+                          />
+                        </div>
+                        
+                        {/* Premium preview button */}
+                        {!isPremium && (
+                          <button
+                            type="button"
+                            onClick={() => setShowPremiumPreview(!showPremiumPreview)}
+                            className="mt-2 text-xs text-yellow-400 hover:text-yellow-300 underline"
+                          >
+                            {showPremiumPreview ? 'Hide Preview' : 'Preview Premium Classes'}
+                          </button>
+                        )}
                       </div>
                       
                       {/* Class Stats */}
                       <div className="mt-4 p-3 glass rounded-xl border border-gray-700/30 space-y-2 animate-fade-in-up">
-                        <StatBar label="PWR" value={classStats[jobClass].power} color="from-red-500 to-orange-500" delay={100} />
-                        <StatBar label="SPD" value={classStats[jobClass].speed} color="from-blue-500 to-cyan-500" delay={200} />
-                        <StatBar label="DEF" value={classStats[jobClass].defense} color="from-green-500 to-emerald-500" delay={300} />
+                        {(() => {
+                          const stats = HUNTER_CLASSES[jobClass].stats;
+                          const isPremiumClass = HUNTER_CLASSES[jobClass].isPremium;
+                          return (
+                            <>
+                              <StatBar label="PWR" value={stats.power} color={isPremiumClass ? "from-yellow-400 to-amber-500" : "from-red-500 to-orange-500"} delay={100} isPremium={isPremiumClass} />
+                              <StatBar label="SPD" value={stats.speed} color={isPremiumClass ? "from-cyan-400 to-blue-500" : "from-blue-500 to-cyan-500"} delay={200} isPremium={isPremiumClass} />
+                              <StatBar label="DEF" value={stats.defense} color={isPremiumClass ? "from-purple-400 to-pink-500" : "from-green-500 to-emerald-500"} delay={300} isPremium={isPremiumClass} />
+                              <StatBar label="MAG" value={stats.magic} color={isPremiumClass ? "from-amber-300 to-yellow-400" : "from-purple-500 to-violet-500"} delay={400} isPremium={isPremiumClass} />
+                            </>
+                          );
+                        })()}
+                      </div>
+                      
+                      {/* Class Description */}
+                      <div className="mt-3 p-3 glass rounded-xl border border-gray-700/30">
+                        <p className="text-sm text-gray-300">
+                          {HUNTER_CLASSES[jobClass].description}
+                        </p>
+                        <div className="mt-2 flex flex-wrap gap-1">
+                          {HUNTER_CLASSES[jobClass].abilities.map((ability, i) => (
+                            <span key={i} className={`text-xs px-2 py-1 rounded-full ${HUNTER_CLASSES[jobClass].isPremium ? 'bg-yellow-500/20 text-yellow-400' : 'bg-orange-500/20 text-orange-400'}`}>
+                              {ability}
+                            </span>
+                          ))}
+                        </div>
                       </div>
                     </div>
 
@@ -588,39 +861,13 @@ export default function LoginPage() {
                   </div>
                 )}
 
-                {/* Submit Button */}
-                <button
-                  type="submit"
-                  disabled={isLoading}
-                  className="w-full relative group/btn overflow-hidden bg-gradient-to-r from-orange-500 via-amber-500 to-orange-500 bg-size-200 text-black font-bold py-4 px-4 rounded-xl transition-all duration-500 shadow-lg shadow-orange-500/30 hover:shadow-xl hover:shadow-orange-500/50 hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed text-lg"
-                >
-                  <span className="relative z-10 flex items-center justify-center gap-2">
-                    {isLoading ? (
-                      <>
-                        <div className="w-5 h-5 border-2 border-black/20 border-t-black rounded-full animate-spin" />
-                        Connecting...
-                      </>
-                    ) : isNewUser ? (
-                      <>
-                        <span className="transition-transform duration-300 group-hover/btn:rotate-12">⚔️</span>
-                        Begin Journey
-                      </>
-                    ) : (
-                      <>
-                        <span className="transition-transform duration-300 group-hover/btn:translate-y-[-2px]">🚀</span>
-                        Ascend
-                      </>
-                    )}
-                  </span>
-                  
-                  {/* Shine effect */}
-                  <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/40 to-transparent -translate-x-full group-hover/btn:translate-x-full transition-transform duration-700" />
-                  
-                  {/* Ripple effect on click */}
-                  <div className="absolute inset-0 opacity-0 group-active/btn:opacity-100 transition-opacity duration-300">
-                    <div className="absolute inset-0 bg-white/20 animate-ping rounded-xl" />
-                  </div>
-                </button>
+                {/* Moving Login Button */}
+                <MovingLoginButton
+                  onClick={() => formRef.current?.requestSubmit()}
+                  isLoading={isLoading}
+                  isNewUser={isNewUser}
+                  isValid={username.trim().length > 0 && password.trim().length > 0}
+                />
 
                 {/* Info Text */}
                 <p className="text-center text-gray-500 text-xs flex items-center justify-center gap-2">
@@ -638,7 +885,7 @@ export default function LoginPage() {
           <div className="text-center mt-8 text-gray-500 text-sm">
             <p className="flex items-center justify-center gap-3">
               <span className="w-1.5 h-1.5 bg-orange-500 rounded-full animate-pulse" />
-              <span className="text-gray-400">Defeat monsters. Earn levels. Become unstoppable.</span>
+              <span className="text-gray-400">Defeat procrastination. Conquer laziness. Become unstoppable.</span>
               <span className="w-1.5 h-1.5 bg-orange-500 rounded-full animate-pulse" />
             </p>
           </div>

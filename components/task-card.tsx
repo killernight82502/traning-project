@@ -12,9 +12,11 @@ interface TaskCardProps {
   task: Task;
   onComplete: (taskId: string, awardedXp?: number) => void;
   onDelete: (taskId: string) => void;
+  onFocusMode?: () => void;
+  onEdit?: (task: Task) => void;
 }
 
-export function TaskCard({ task, onComplete, onDelete }: TaskCardProps) {
+export function TaskCard({ task, onComplete, onDelete, onFocusMode, onEdit }: TaskCardProps) {
   const difficulty = DIFFICULTY_RANKS[task.difficulty];
   const isCompleted = task.completed;
   const { user } = useAuth();
@@ -126,6 +128,11 @@ export function TaskCard({ task, onComplete, onDelete }: TaskCardProps) {
               {task.description && (
                 <p className="text-sm text-gray-400 leading-relaxed">{task.description}</p>
               )}
+              {task.recurring && (
+                <span className="text-xs text-cyan-400 flex items-center gap-1 mt-1">
+                  🔄 {task.recurringInterval === "weekly" ? "Weekly" : "Daily"} Recurring
+                </span>
+              )}
             </div>
           </div>
 
@@ -160,6 +167,15 @@ export function TaskCard({ task, onComplete, onDelete }: TaskCardProps) {
                   Complete Quest
                 </span>
                 <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover/btn:translate-x-full transition-transform duration-500" />
+              </Button>
+            )}
+            {!isCompleted && onEdit && (
+              <Button
+                onClick={() => onEdit(task)}
+                variant="outline"
+                className="text-blue-400 border-blue-500/30 hover:bg-blue-500/10 hover:border-blue-500/50 hover:text-blue-300 transition-all duration-300"
+              >
+                ✏️ Edit
               </Button>
             )}
             <Button
